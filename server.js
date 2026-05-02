@@ -15,7 +15,7 @@ const CEP_ORIGEM = "07500000";
 app.get("/", (req, res) => {
   res.json({
     status: "API DEDPLAS funcionando",
-    rotas: ["/pagar", "/frete"]
+    rotas: ["/pagar", "/frete", "/webhook"]
   });
 });
 
@@ -70,7 +70,7 @@ app.post("/frete", async (req, res) => {
 
 app.post("/pagar", async (req, res) => {
   try {
-    const { itens, frete } = req.body;
+    const { itens, frete, pedidoId } = req.body;
 
     if (!ACCESS_TOKEN) {
       return res.status(500).json({ erro: "ACCESS_TOKEN não configurado no Render" });
@@ -105,7 +105,13 @@ app.post("/pagar", async (req, res) => {
       body: JSON.stringify({
         items,
         statement_descriptor: "DEDPLAS",
-        external_reference: "DEDPLAS-" + Date.now()
+        external_reference: pedidoId || ("DEDPLAS-" + Date.now()),
+        back_urls: {
+          success: "https://dedplas-237af.web.app",
+          failure: "https://dedplas-237af.web.app",
+          pending: "https://dedplas-237af.web.app"
+        },
+        auto_return: "approved"
       })
     });
 
@@ -123,6 +129,11 @@ app.post("/pagar", async (req, res) => {
   } catch (erro) {
     return res.status(500).json({ erro: erro.message });
   }
+});
+
+app.post("/webhook", async (req, res) => {
+  console.log("Webhook Mercado Pago recebido:", JSON.stringify(req.body));
+  res.sendStatus(200);
 });
 
 const PORT = process.env.PORT || 3000;
