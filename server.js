@@ -4,7 +4,7 @@ import fetch from "node-fetch";
 
 const app = express();
 
-app.use(cors());
+app.use(cors({ origin: "*" }));
 app.use(express.json());
 
 const ACCESS_TOKEN = process.env.ACCESS_TOKEN;
@@ -35,9 +35,15 @@ app.post("/frete", async (req, res) => {
       return res.status(400).json({ erro: "Carrinho vazio" });
     }
 
-    const pesoTotal = itens.reduce((soma, item) => {
-      return soma + (Number(item.peso || 0.3) * Number(item.quantidade || 1));
-    }, 0);
+    const products = itens.map((item, index) => ({
+      id: String(index + 1),
+      width: Number(item.largura || 15),
+      height: Number(item.altura || 15),
+      length: Number(item.comprimento || 15),
+      weight: Number(item.peso || 0.3),
+      insurance_value: Number(item.preco || 1),
+      quantity: Number(item.quantidade || 1)
+    }));
 
     const resposta = await fetch("https://www.melhorenvio.com.br/api/v2/me/shipment/calculate", {
       method: "POST",
@@ -48,28 +54,13 @@ app.post("/frete", async (req, res) => {
         "User-Agent": "DEDPLAS (dihonesgomes@gmail.com)"
       },
       body: JSON.stringify({
-        from: {
-          postal_code: CEP_ORIGEM
-        },
-        to: {
-          postal_code: String(cep).replace(/\D/g, "")
-        },
-        products: [
-          {
-            id: "1",
-            width: 15,
-            height: 15,
-            length: 15,
-            weight: pesoTotal < 0.3 ? 0.3 : pesoTotal,
-            insurance_value: 50,
-            quantity: 1
-          }
-        ]
+        from: { postal_code: CEP_ORIGEM },
+        to: { postal_code: String(cep).replace(/\D/g, "") },
+        products
       })
     });
 
     const dados = await resposta.json();
-
     return res.json(dados);
 
   } catch (erro) {
