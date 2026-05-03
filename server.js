@@ -35,15 +35,27 @@ app.post("/frete", async (req, res) => {
       return res.status(400).json({ erro: "Carrinho vazio" });
     }
 
-    const products = itens.map((item, index) => ({
-      id: String(index + 1),
-      width: Number(item.largura || 15),
-      height: Number(item.altura || 15),
-      length: Number(item.comprimento || 15),
-      weight: Number(item.peso || 0.3),
-      insurance_value: Number(item.preco || 1),
-      quantity: Number(item.quantidade || 1)
-    }));
+    const products = itens.map((item, index) => {
+      const quantidade = Number(item.quantidade || 1);
+
+      return {
+        id: String(index + 1),
+
+        // Dimensões por unidade (correto para Melhor Envio)
+        width: Number(item.largura || 15),
+        height: Number(item.altura || 15),
+        length: Number(item.comprimento || 15),
+
+        // Peso por unidade (Melhor Envio multiplica automaticamente)
+        weight: Number(item.peso || 0.3),
+
+        // 🔥 CORREÇÃO IMPORTANTE
+        insurance_value: Number(item.preco || 1) * quantidade,
+
+        // Quantidade total
+        quantity: quantidade
+      };
+    });
 
     const resposta = await fetch("https://www.melhorenvio.com.br/api/v2/me/shipment/calculate", {
       method: "POST",
